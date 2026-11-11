@@ -1,0 +1,54 @@
+name: Sync fork with upstream
+
+on:
+  schedule:
+    # 09:00 Europe/Berlin = 08:00 UTC (CET) / 07:00 UTC (CEST).
+    # GitHub cron is UTC only, so both slots run. The sync is idempotent,
+    # the second run of the day is a no-op.
+    - cron: "0 7,8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    # Never run in the upstream repo or in forks of this fork
+    if: github.repository == 'tfoks/devicetype-library'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Merge upstream into default branch
+        env:
+          # SYNC_TOKEN: fine-grained PAT (Contents + Workflows: read/write).
+          # Required as soon as upstream changes files under .github/workflows,
+          # GITHUB_TOKEN is not allowed to update workflow files.
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN || github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          branch=$(gh api "repos/${REPO}" --jq '.default_branch')
+          echo "Syncing ${REPO}@${branch} with upstream"
+
+          response=$(gh api -X POST "repos/${REPO}/merge-upstream" -f branch="${branch}")
+          echo "${response}" | jq .
+
+          merge_type=$(echo "${response}" | jq -r '.merge_type // "unknown"')
+          message=$(echo "${response}" | jq -r '.message // ""')
+          head_sha=$(gh api "repos/${REPO}/commits/${branch}" --jq '.sha')
+
+          {
+            echo "### Fork sync"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Branch | \`${branch}\` |"
+            echo "| Merge type | \`${merge_type}\` |"
+            echo "| Message | ${message} |"
+            echo "| HEAD | \`${head_sha}\` |"
+          } >> "${GITHUB_STEP_SUMMARY}"
