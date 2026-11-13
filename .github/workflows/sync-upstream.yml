@@ -2,10 +2,12 @@ name: Sync fork with upstream
 
 on:
   schedule:
-    # 09:00 Europe/Berlin = 08:00 UTC (CET) / 07:00 UTC (CEST).
-    # GitHub cron is UTC only, so both slots run. The sync is idempotent,
-    # the second run of the day is a no-op.
-    - cron: "0 7,8 * * *"
+    # Target: synced before 09:00 Europe/Berlin.
+    # 06:43/07:43 UTC = 07:43/08:43 CET (winter), 08:43/09:43 CEST (summer).
+    # GitHub cron is UTC only and best effort; runs on the full hour are
+    # often delayed or dropped under load, hence the odd minute and two
+    # slots. The sync is idempotent, a redundant run is a no-op.
+    - cron: "43 6,7 * * *"
   workflow_dispatch:
 
 permissions:
