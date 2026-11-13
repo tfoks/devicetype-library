@@ -1,13 +1,8 @@
 name: Sync fork with upstream
 
 on:
-  schedule:
-    # Target: synced before 09:00 Europe/Berlin.
-    # 06:43/07:43 UTC = 07:43/08:43 CET (winter), 08:43/09:43 CEST (summer).
-    # GitHub cron is UTC only and best effort; runs on the full hour are
-    # often delayed or dropped under load, hence the odd minute and two
-    # slots. The sync is idempotent, a redundant run is a no-op.
-    - cron: "43 6,7 * * *"
+  # The daily sync is scheduled externally (it calls the merge-upstream API
+  # directly), GitHub's cron proved unreliable. Kept for manual runs.
   workflow_dispatch:
 
 permissions:
